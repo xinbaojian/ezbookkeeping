@@ -1693,6 +1693,7 @@
     "Transaction Details": "交易详情",
     "Statistics & Analysis": "统计分析",
     "Insights & Explore": "洞察探索",
+    "Customer Management": "客户管理",
     "Query": "查询",
     "Data Table": "数据表格",
     "Chart": "图表",
@@ -2433,5 +2434,7 @@
     "An error occurred": "发生错误",
     "Parameter Invalid": "参数错误",
     "Numeric Overflow": "数值溢出",
-    "Click to close": "点击关闭"
+    "Click to close": "点击关闭",
+    "Customer Name": "客户名称",
+    "No Available Customer": "没有可用的客户"
 }

@@ -1,7 +1,7 @@
-import { type NavigationGuardReturn, createRouter, createWebHashHistory } from 'vue-router';
+import {createRouter, createWebHashHistory, type NavigationGuardReturn} from 'vue-router';
 
-import { TemplateType } from '@/core/template.ts';
-import { isUserLogined, isUserUnlocked } from '@/lib/userstate.ts';
+import {TemplateType} from '@/core/template.ts';
+import {isUserLogined, isUserUnlocked} from '@/lib/userstate.ts';
 
 import MainLayout from '@/views/desktop/MainLayout.vue';
 import LoginPage from '@/views/desktop/LoginPage.vue';
@@ -33,6 +33,8 @@ import AppSettingsPage from '@/views/desktop/app/AppSettingsPage.vue';
 
 import ExchangeRatesListPage from '@/views/desktop/exchangerates/ListPage.vue';
 import AboutPage from '@/views/desktop/AboutPage.vue';
+
+import CustomerManager from '@/views/desktop/customer/index.vue';
 
 function checkLogin(): NavigationGuardReturn {
     if (!isUserLogined()) {
@@ -149,6 +151,11 @@ const router = createRouter({
                         initStartTime: route.query['startTime'],
                         initEndTime: route.query['endTime']
                     })
+                },
+                {
+                    path: '/customer/list',
+                    component: CustomerManager,
+                    beforeEnter: checkLogin,
                 },
                 {
                     path: '/account/list',

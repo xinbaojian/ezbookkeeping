@@ -50,6 +50,12 @@
                         <span class="nav-item-title">{{ tt('Insights & Explore') }}</span>
                     </router-link>
                 </li>
+                <li class="nav-link">
+                    <router-link to="/customer/list">
+                        <v-icon class="nav-item-icon" :icon="mdiNaturePeople"/>
+                        <span class="nav-item-title">{{ tt('Customer Management') }}</span>
+                    </router-link>
+                </li>
                 <li class="nav-section-title">
                     <div class="title-wrapper">
                         <span class="title-text">{{ tt('Basis Data') }}</span>
@@ -245,7 +251,8 @@ import {
     mdiAccount,
     mdiAccountCogOutline,
     mdiLockOutline,
-    mdiLogout
+    mdiLogout,
+    mdiNaturePeople
 } from '@mdi/js';
 
 type SnackBarType = InstanceType<typeof SnackBar>;
