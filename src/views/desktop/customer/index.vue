@@ -6,12 +6,9 @@
                     <div class="title-and-toolbar d-flex align-center">
                         <span>{{ tt('Customer Management') }}</span>
                         <v-btn class="ms-3" color="default" variant="outlined"
-                            :disabled="loading || updating || hasEditingTag" @click="add">{{ tt('Add') }}</v-btn>
-                        <v-btn class="ms-3" color="primary" variant="tonal"
-                            :disabled="loading || updating || hasEditingTag" @click="saveSortResult"
-                            v-if="displayOrderModified">{{ tt('Save Display Order') }}</v-btn>
+                            :disabled="loading || updating" @click="add">{{ tt('Add') }}</v-btn>
                         <v-btn density="compact" color="default" variant="text" size="24" class="ms-2" :icon="true"
-                            :disabled="loading || updating || hasEditingTag" :loading="loading" @click="reload">
+                            :disabled="loading || updating" :loading="loading" @click="reload">
                             <template #loader>
                                 <v-progress-circular indeterminate size="20" />
                             </template>
@@ -20,15 +17,15 @@
                         </v-btn>
                         <v-spacer />
                         <v-btn density="comfortable" color="default" variant="text" class="ms-2"
-                            :disabled="loading || updating || hasEditingTag" :icon="true">
+                            :disabled="loading || updating" :icon="true">
                             <v-icon :icon="mdiDotsVertical" />
                             <v-menu activator="parent">
                                 <v-list>
                                     <v-list-item :prepend-icon="mdiEyeOutline"
-                                        :title="tt('Show Hidden Transaction Tags')" v-if="!showHidden"
+                                        :title="tt('Show Hidden Customers')" v-if="!showHidden"
                                         @click="showHidden = true"></v-list-item>
                                     <v-list-item :prepend-icon="mdiEyeOffOutline"
-                                        :title="tt('Hide Hidden Transaction Tags')" v-if="showHidden"
+                                        :title="tt('Hide Hidden Customers')" v-if="showHidden"
                                         @click="showHidden = false"></v-list-item>
                                 </v-list>
                             </v-menu>
@@ -36,141 +33,163 @@
                     </div>
                 </template>
 
-                <v-table class="transaction-tags-table table-striped" :hover="!loading">
+                <v-table class="customers-table table-striped" :hover="!loading">
                     <thead>
                         <tr>
-                            <th>
+                            <th style="width: 20%;">
                                 <div class="d-flex align-center">
-                                    <span>{{ tt('Customer Name') }}</span>
-                                    <v-spacer />
+                                    <span>{{ tt('Name') }}</span>
+                                </div>
+                            </th>
+                            <th style="width: 15%;">
+                                <div class="d-flex align-center">
+                                    <span>{{ tt('Type') }}</span>
+                                </div>
+                            </th>
+                            <th style="width: 20%;">
+                                <div class="d-flex align-center">
+                                    <span>{{ tt('Contacts') }}</span>
+                                </div>
+                            </th>
+                            <th style="width: 15%;">
+                                <div class="d-flex align-center">
+                                    <span>{{ tt('Phone') }}</span>
+                                </div>
+                            </th>
+                            <th style="width: 30%;">
+                                <div class="d-flex align-center">
                                     <span>{{ tt('Operation') }}</span>
                                 </div>
                             </th>
                         </tr>
                     </thead>
 
-                    <tbody v-if="loading && noAvailableTag && !newTag">
-                        <tr :key="itemIdx" v-for="itemIdx in [1, 2, 3]">
-                            <td class="px-0">
+                    <tbody v-if="loading && noAvailableCustomer">
+                        <tr :key="itemIdx" v-for="itemIdx in [1, 2, 3, 4, 5]">
+                            <td colspan="5" class="px-0">
                                 <v-skeleton-loader type="text" :loading="true"></v-skeleton-loader>
                             </td>
                         </tr>
                     </tbody>
 
-                    <tbody v-if="!loading && noAvailableTag && !newTag">
+                    <tbody v-if="!loading && noAvailableCustomer">
                         <tr>
-                            <td>{{ tt('No Available Customer') }}</td>
+                            <td colspan="5">{{ tt('No Available Customer') }}</td>
                         </tr>
                     </tbody>
 
-                    <draggable-list tag="tbody" item-key="id" handle=".drag-handle" ghost-class="dragging-item"
-                        :class="{ 'has-bottom-border': newTag }" :disabled="noAvailableTag" v-model="tags"
-                        @change="onMove">
-                        <template #item="{ element }">
-                            <tr class="transaction-tags-table-row-tag text-sm" v-if="showHidden || !element.hidden">
-                                <td>
-                                    <div class="d-flex align-center">
-                                        <div class="d-flex align-center" v-if="editingTag.id !== element.id">
-                                            <v-badge class="right-bottom-icon" color="secondary" location="bottom right"
-                                                offset-x="8" :icon="mdiEyeOffOutline" v-if="element.hidden">
-                                                <v-icon size="20" start :icon="mdiPound" />
-                                            </v-badge>
-                                            <v-icon size="20" start :icon="mdiPound" v-else-if="!element.hidden" />
-                                            <span class="transaction-tag-name">{{ element.name }}</span>
-                                        </div>
-
-                                        <v-text-field class="w-100 me-2" type="text" density="compact"
-                                            variant="underlined" :disabled="loading || updating"
-                                            :placeholder="tt('Tag Title')" v-model="editingTag.name"
-                                            v-else-if="editingTag.id === element.id" @keyup.enter="save(editingTag)">
-                                            <template #prepend>
-                                                <v-badge class="right-bottom-icon" color="secondary"
-                                                    location="bottom right" offset-x="8" :icon="mdiEyeOffOutline"
-                                                    v-if="element.hidden">
-                                                    <v-icon size="20" start :icon="mdiPound" />
-                                                </v-badge>
-                                                <v-icon size="20" start :icon="mdiPound" v-else-if="!element.hidden" />
-                                            </template>
-                                        </v-text-field>
-
-                                        <v-spacer />
-
-                                        <v-btn class="px-2 ms-2" color="default" density="comfortable" variant="text"
-                                            :class="{ 'd-none': loading, 'hover-display': !loading }"
-                                            :prepend-icon="element.hidden ? mdiEyeOutline : mdiEyeOffOutline"
-                                            :loading="tagHiding[element.id]" :disabled="loading || updating"
-                                            v-if="editingTag.id !== element.id" @click="hide(element, !element.hidden)">
-                                            <template #loader>
-                                                <v-progress-circular indeterminate size="20" width="2" />
-                                            </template>
-                                            {{ element.hidden ? tt('Show') : tt('Hide') }}
-                                        </v-btn>
-                                        <v-btn class="px-2" color="default" density="comfortable" variant="text"
-                                            :class="{ 'd-none': loading, 'hover-display': !loading }"
-                                            :prepend-icon="mdiPencilOutline" :loading="tagUpdating[element.id]"
-                                            :disabled="loading || updating" v-if="editingTag.id !== element.id"
-                                            @click="edit(element)">
-                                            <template #loader>
-                                                <v-progress-circular indeterminate size="20" width="2" />
-                                            </template>
-                                            {{ tt('Edit') }}
-                                        </v-btn>
-                                        <v-btn class="px-2" color="default" density="comfortable" variant="text"
-                                            :class="{ 'd-none': loading, 'hover-display': !loading }"
-                                            :prepend-icon="mdiDeleteOutline" :loading="tagRemoving[element.id]"
-                                            :disabled="loading || updating" v-if="editingTag.id !== element.id"
-                                            @click="remove(element)">
-                                            <template #loader>
-                                                <v-progress-circular indeterminate size="20" width="2" />
-                                            </template>
-                                            {{ tt('Delete') }}
-                                        </v-btn>
-                                        <v-btn class="px-2" density="comfortable" variant="text"
-                                            :prepend-icon="mdiCheck" :loading="tagUpdating[element.id]"
-                                            :disabled="loading || updating || !isTagModified(element)"
-                                            v-if="editingTag.id === element.id" @click="save(editingTag)">
-                                            <template #loader>
-                                                <v-progress-circular indeterminate size="20" width="2" />
-                                            </template>
-                                            {{ tt('Save') }}
-                                        </v-btn>
-                                        <v-btn class="px-2" color="default" density="comfortable" variant="text"
-                                            :prepend-icon="mdiClose" :disabled="loading || updating"
-                                            v-if="editingTag.id === element.id" @click="cancelSave(editingTag)">
-                                            {{ tt('Cancel') }}
-                                        </v-btn>
-                                        <span class="ms-2">
-                                            <v-icon
-                                                :class="!loading && !updating && !hasEditingTag && availableTagCount > 1 ? 'drag-handle' : 'disabled'"
-                                                :icon="mdiDrag" />
-                                            <v-tooltip activator="parent"
-                                                v-if="!loading && !updating && !hasEditingTag && availableTagCount > 1">{{
-                                                tt('Drag to Reorder') }}</v-tooltip>
-                                        </span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </template>
-                    </draggable-list>
-
-                    <tbody v-if="newTag">
-                        <tr class="text-sm" :class="{ 'even-row': (availableTagCount & 1) === 1 }">
+                    <template v-for="customer in customers" :key="customer.id">
+                        <tr class="customers-table-row text-sm" v-if="showHidden || !customer.hidden">
                             <td>
                                 <div class="d-flex align-center">
-                                    <v-text-field class="w-100 me-2" type="text" color="primary" density="compact"
-                                        variant="underlined" :disabled="loading || updating"
-                                        :placeholder="tt('Tag Title')" v-model="newTag.name"
-                                        @keyup.enter="save(newTag)">
-                                        <template #prepend>
-                                            <v-icon size="20" start :icon="mdiPound" />
+                                    <v-badge class="right-bottom-icon" color="secondary" location="bottom right"
+                                        offset-x="4" :icon="mdiEyeOffOutline" v-if="customer.hidden">
+                                        <v-icon size="20" start :icon="mdiAccountBoxOutline" />
+                                    </v-badge>
+                                    <v-icon size="20" start :icon="mdiAccountBoxOutline" v-else />
+                                    <span class="customer-name">{{ customer.name }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span>{{ getCustomerTypeName(customer.customerType) }}</span>
+                            </td>
+                            <td>
+                                <span>{{ customer.contacts || '-' }}</span>
+                            </td>
+                            <td>
+                                <span>{{ customer.contactsInfo || '-' }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-center">
+                                    <v-btn class="px-2" color="default" density="comfortable" variant="text"
+                                        :class="{ 'd-none': loading, 'hover-display': !loading }"
+                                        :prepend-icon="customer.hidden ? mdiEyeOutline : mdiEyeOffOutline"
+                                        :loading="customerHiding[customer.id]" :disabled="loading || updating"
+                                        @click="hide(customer, !customer.hidden)">
+                                        <template #loader>
+                                            <v-progress-circular indeterminate size="20" width="2" />
                                         </template>
-                                    </v-text-field>
+                                        {{ customer.hidden ? tt('Show') : tt('Hide') }}
+                                    </v-btn>
+                                    <v-btn class="px-2" color="default" density="comfortable" variant="text"
+                                        :class="{ 'd-none': loading, 'hover-display': !loading }"
+                                        :prepend-icon="mdiPencilOutline" :loading="customerUpdating[customer.id]"
+                                        :disabled="loading || updating" @click="edit(customer)">
+                                        <template #loader>
+                                            <v-progress-circular indeterminate size="20" width="2" />
+                                        </template>
+                                        {{ tt('Edit') }}
+                                    </v-btn>
+                                    <v-btn class="px-2" color="default" density="comfortable" variant="text"
+                                        :class="{ 'd-none': loading, 'hover-display': !loading }"
+                                        :prepend-icon="mdiDeleteOutline" :loading="customerRemoving[customer.id]"
+                                        :disabled="loading || updating" @click="remove(customer)">
+                                        <template #loader>
+                                            <v-progress-circular indeterminate size="20" width="2" />
+                                        </template>
+                                        {{ tt('Delete') }}
+                                    </v-btn>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
 
-                                    <v-spacer />
-
+                    <tbody v-if="newCustomer">
+                        <tr class="text-sm">
+                            <td colspan="5">
+                                <v-text-field class="w-100" type="text" color="primary" density="compact"
+                                    variant="underlined" :disabled="loading || updating"
+                                    :label="tt('Name')" v-model="newCustomer.name"
+                                    @keyup.enter="save(newCustomer)">
+                                </v-text-field>
+                            </td>
+                        </tr>
+                        <tr class="text-sm">
+                            <td colspan="5">
+                                <v-select class="customer-type-select" :items="customerTypeOptions"
+                                    :label="tt('Customer Type')" v-model="newCustomer.customerType"
+                                    :disabled="loading || updating" density="compact" variant="underlined"
+                                    return-object />
+                            </td>
+                        </tr>
+                        <tr class="text-sm">
+                            <td colspan="5">
+                                <v-text-field class="w-100" type="text" color="primary" density="compact"
+                                    variant="underlined" :disabled="loading || updating"
+                                    :label="tt('Address')" v-model="newCustomer.address">
+                                </v-text-field>
+                            </td>
+                        </tr>
+                        <tr class="text-sm">
+                            <td colspan="5">
+                                <v-text-field class="w-100" type="text" color="primary" density="compact"
+                                    variant="underlined" :disabled="loading || updating"
+                                    :label="tt('Contacts')" v-model="newCustomer.contacts">
+                                </v-text-field>
+                            </td>
+                        </tr>
+                        <tr class="text-sm">
+                            <td colspan="5">
+                                <v-text-field class="w-100" type="text" color="primary" density="compact"
+                                    variant="underlined" :disabled="loading || updating"
+                                    :label="tt('Phone')" v-model="newCustomer.contactsInfo">
+                                </v-text-field>
+                            </td>
+                        </tr>
+                        <tr class="text-sm">
+                            <td colspan="5">
+                                <v-text-field class="w-100" type="text" color="primary" density="compact"
+                                    variant="underlined" :disabled="loading || updating"
+                                    :label="tt('Comment')" v-model="newCustomer.comment">
+                                </v-text-field>
+                            </td>
+                        </tr>
+                        <tr class="text-sm">
+                            <td colspan="5">
+                                <div class="d-flex align-center">
                                     <v-btn class="px-2" density="comfortable" variant="text" :prepend-icon="mdiCheck"
-                                        :loading="tagUpdating['']"
-                                        :disabled="loading || updating || !isTagModified(newTag)" @click="save(newTag)">
+                                        :loading="customerUpdating['']"
+                                        :disabled="loading || updating || !isNewCustomerModified" @click="save(newCustomer)">
                                         <template #loader>
                                             <v-progress-circular indeterminate size="20" width="2" />
                                         </template>
@@ -178,12 +197,9 @@
                                     </v-btn>
                                     <v-btn class="px-2" color="default" density="comfortable" variant="text"
                                         :prepend-icon="mdiClose" :disabled="loading || updating"
-                                        @click="cancelSave(newTag)">
+                                        @click="cancelSave">
                                         {{ tt('Cancel') }}
                                     </v-btn>
-                                    <span class="ms-2">
-                                        <v-icon class="disabled" :icon="mdiDrag" />
-                                    </span>
                                 </div>
                             </td>
                         </tr>
@@ -193,6 +209,7 @@
         </v-col>
     </v-row>
 
+    <customer-edit-dialog ref="editDialog" />
     <confirm-dialog ref="confirmDialog" />
     <snack-bar ref="snackbar" />
 </template>
@@ -200,19 +217,14 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/desktop/ConfirmDialog.vue';
 import SnackBar from '@/components/desktop/SnackBar.vue';
+import CustomerEditDialog from './dialogs/EditDialog.vue';
 
-import { ref, computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef, watch } from 'vue';
 
 import { useI18n } from '@/locales/helpers.ts';
-
-import { useTransactionTagsStore } from '@/stores/transactionTag.ts';
-
-import { TransactionTag } from '@/models/transaction_tag.ts';
-
-import {
-    isNoAvailableTag,
-    getAvailableTagCount
-} from '@/lib/tag.ts';
+import { useCustomersStore } from '@/stores/customer.ts';
+import { Customer, CustomerType, type CustomerInfo } from '@/models/customer.ts';
+import { generateClientSessionId } from '@/lib/session.ts';
 
 import {
     mdiRefresh,
@@ -222,65 +234,70 @@ import {
     mdiEyeOffOutline,
     mdiEyeOutline,
     mdiDeleteOutline,
-    mdiDrag,
     mdiDotsVertical,
-    mdiPound
+    mdiAccountBoxOutline
 } from '@mdi/js';
 
 type ConfirmDialogType = InstanceType<typeof ConfirmDialog>;
 type SnackBarType = InstanceType<typeof SnackBar>;
+type CustomerEditDialogType = InstanceType<typeof CustomerEditDialog>;
 
 const { tt } = useI18n();
 
-const transactionTagsStore = useTransactionTagsStore();
+const customersStore = useCustomersStore();
 
 const confirmDialog = useTemplateRef<ConfirmDialogType>('confirmDialog');
 const snackbar = useTemplateRef<SnackBarType>('snackbar');
+const editDialog = useTemplateRef<CustomerEditDialogType>('editDialog');
 
-const newTag = ref<TransactionTag | null>(null);
-const editingTag = ref<TransactionTag>(TransactionTag.createNewTag());
+const newCustomer = ref<Customer | null>(null);
 const loading = ref<boolean>(true);
 const updating = ref<boolean>(false);
-const tagUpdating = ref<Record<string, boolean>>({});
-const tagHiding = ref<Record<string, boolean>>({});
-const tagRemoving = ref<Record<string, boolean>>({});
-const displayOrderModified = ref<boolean>(false);
+const customerUpdating = ref<Record<string, boolean>>({});
+const customerHiding = ref<Record<string, boolean>>({});
+const customerRemoving = ref<Record<string, boolean>>({});
 const showHidden = ref<boolean>(false);
 
-const tags = computed<TransactionTag[]>(() => transactionTagsStore.allTransactionTags);
-const noAvailableTag = computed<boolean>(() => isNoAvailableTag(tags.value, showHidden.value));
-const availableTagCount = computed<number>(() => getAvailableTagCount(tags.value, showHidden.value));
-const hasEditingTag = computed<boolean>(() => !!(newTag.value || (editingTag.value.id && editingTag.value.id !== '')));
+const customers = computed<Customer[]>(() => customersStore.allCustomers);
+const noAvailableCustomer = computed<boolean>(() => {
+    if (newCustomer.value) {
+        return false;
+    }
+    return customers.value.filter(c => showHidden.value || !c.hidden).length === 0;
+});
+const isNewCustomerModified = computed<boolean>(() => {
+    return newCustomer.value !== null && newCustomer.value.name.trim() !== '';
+});
 
-function isTagModified(tag: TransactionTag): boolean {
-    if (tag.id) {
-        return editingTag.value.name !== '' && editingTag.value.name !== tag.name;
-    } else {
-        return tag.name !== '';
+const customerTypeOptions = computed(() => [
+    { title: tt('Customer'), value: CustomerType.CUSTOMER },
+    { title: tt('Supplier'), value: CustomerType.SUPPLIER },
+    { title: tt('Both'), value: CustomerType.BOTH }
+]);
+
+function getCustomerTypeName(type: CustomerType): string {
+    switch (type) {
+        case CustomerType.CUSTOMER:
+            return tt('Customer');
+        case CustomerType.SUPPLIER:
+            return tt('Supplier');
+        case CustomerType.BOTH:
+            return tt('Both');
+        default:
+            return '';
     }
 }
 
 function reload(): void {
-    if (hasEditingTag.value) {
-        return;
-    }
-
     loading.value = true;
 
-    transactionTagsStore.loadAllTags({
-        force: true
+    customersStore.getAllCustomers({
+        visible_only: !showHidden.value
     }).then(() => {
         loading.value = false;
-        displayOrderModified.value = false;
-
-        snackbar.value?.showMessage('Tag list has been updated');
+        snackbar.value?.showMessage(tt('Customer list has been updated'));
     }).catch(error => {
         loading.value = false;
-
-        if (error && error.isUpToDate) {
-            displayOrderModified.value = false;
-        }
-
         if (!error.processed) {
             snackbar.value?.showError(error);
         }
@@ -288,102 +305,80 @@ function reload(): void {
 }
 
 function add(): void {
-    newTag.value = TransactionTag.createNewTag();
+    newCustomer.value = Customer.createNew('', CustomerType.CUSTOMER);
 }
 
-function edit(tag: TransactionTag): void {
-    editingTag.value.id = tag.id;
-    editingTag.value.name = tag.name;
-}
-
-function save(tag: TransactionTag): void {
-    updating.value = true;
-    tagUpdating.value[tag.id || ''] = true;
-
-    transactionTagsStore.saveTag({
-        tag: tag
-    }).then(() => {
-        updating.value = false;
-        tagUpdating.value[tag.id || ''] = false;
-
-        if (tag.id) {
-            editingTag.value.id = '';
-            editingTag.value.name = '';
-        } else {
-            newTag.value = null;
-        }
-    }).catch(error => {
-        updating.value = false;
-        tagUpdating.value[tag.id || ''] = false;
-
-        if (!error.processed) {
-            snackbar.value?.showError(error);
+function edit(customer: Customer): void {
+    editDialog.value?.open(customer).then((modified) => {
+        if (modified) {
+            reload();
         }
     });
 }
 
-function cancelSave(tag: TransactionTag): void {
-    if (tag.id) {
-        editingTag.value.id = '';
-        editingTag.value.name = '';
-    } else {
-        newTag.value = null;
-    }
-}
-
-function saveSortResult(): void {
-    if (!displayOrderModified.value) {
+function save(customer: Customer): void {
+    if (!customer) {
         return;
     }
 
-    loading.value = true;
-
-    transactionTagsStore.updateTagDisplayOrders().then(() => {
-        loading.value = false;
-        displayOrderModified.value = false;
-    }).catch(error => {
-        loading.value = false;
-
-        if (!error.processed) {
-            snackbar.value?.showError(error);
-        }
-    });
-}
-
-function hide(tag: TransactionTag, hidden: boolean): void {
     updating.value = true;
-    tagHiding.value[tag.id] = true;
+    customerUpdating.value[customer.id || ''] = true;
 
-    transactionTagsStore.hideTag({
-        tag: tag,
-        hidden: hidden
+    const clientSessionId = generateClientSessionId();
+
+    customersStore.createCustomer({
+        name: customer.name,
+        customer_type: customer.customerType,
+        address: customer.address,
+        contacts: customer.contacts,
+        contacts_info: customer.contactsInfo,
+        comment: customer.comment,
+        hidden: customer.hidden,
+        client_session_id: clientSessionId
     }).then(() => {
         updating.value = false;
-        tagHiding.value[tag.id] = false;
+        customerUpdating.value[customer.id || ''] = false;
+        newCustomer.value = null;
     }).catch(error => {
         updating.value = false;
-        tagHiding.value[tag.id] = false;
-
+        customerUpdating.value[customer.id || ''] = false;
         if (!error.processed) {
             snackbar.value?.showError(error);
         }
     });
 }
 
-function remove(tag: TransactionTag): void {
-    confirmDialog.value?.open('Are you sure you want to delete this tag?').then(() => {
-        updating.value = true;
-        tagRemoving.value[tag.id] = true;
+function cancelSave(): void {
+    newCustomer.value = null;
+}
 
-        transactionTagsStore.deleteTag({
-            tag: tag
-        }).then(() => {
+function hide(customer: Customer, hidden: boolean): void {
+    updating.value = true;
+    customerHiding.value[customer.id] = true;
+
+    customersStore.hideCustomer(customer.id, hidden).then(() => {
+        updating.value = false;
+        customerHiding.value[customer.id] = false;
+    }).catch(error => {
+        updating.value = false;
+        customerHiding.value[customer.id] = false;
+        if (!error.processed) {
+            snackbar.value?.showError(error);
+        }
+    });
+}
+
+function remove(customer: Customer): void {
+    confirmDialog.value?.open(tt('Are you sure you want to delete this customer?')).then(() => {
+        updating.value = true;
+        customerRemoving.value[customer.id] = true;
+
+        customersStore.deleteCustomer(customer.id).then(() => {
             updating.value = false;
-            tagRemoving.value[tag.id] = false;
+            customerRemoving.value[customer.id] = false;
         }).catch(error => {
             updating.value = false;
-            tagRemoving.value[tag.id] = false;
-
+            customerRemoving.value[customer.id] = false;
             if (!error.processed) {
                 snackbar.value?.showError(error);
             }
@@ -391,87 +386,45 @@ function remove(tag: TransactionTag): void {
     });
 }
 
-function onMove(event: { moved: { element: { id: string }; oldIndex: number; newIndex: number } }): void {
-    if (!event || !event.moved) {
-        return;
-    }
+watch(showHidden, () => {
+    reload();
+});
 
-    const moveEvent = event.moved;
-
-    if (!moveEvent.element || !moveEvent.element.id) {
-        snackbar.value?.showMessage('Unable to move tag');
-        return;
-    }
-
-    transactionTagsStore.changeTagDisplayOrder({
-        tagId: moveEvent.element.id,
-        from: moveEvent.oldIndex,
-        to: moveEvent.newIndex
-    }).then(() => {
-        displayOrderModified.value = true;
-    }).catch(error => {
-        snackbar.value?.showError(error);
-    });
-}
-
-transactionTagsStore.loadAllTags({
-    force: false
+// Load initial data
+customersStore.getAllCustomers({
+    visible_only: false
 }).then(() => {
     loading.value = false;
 }).catch(error => {
     loading.value = false;
-
     if (!error.processed) {
         snackbar.value?.showError(error);
     }
 });
 </script>
 
-<style>
-.transaction-tags-table tr.transaction-tags-table-row-tag .hover-display {
+<style scoped>
+.customers-table tr.customers-table-row .hover-display {
     display: none;
 }
 
-.transaction-tags-table tr.transaction-tags-table-row-tag:hover .hover-display {
+.customers-table tr.customers-table-row:hover .hover-display {
     display: inline-grid;
 }
 
-.transaction-tags-table tr:not(:last-child)>td>div {
+.customers-table tr:not(:last-child)>td>div {
     padding-bottom: 1px;
 }
 
-.transaction-tags-table .has-bottom-border tr:last-child>td>div {
+.customers-table tr.customers-table-row .right-bottom-icon .v-badge__badge {
     padding-bottom: 1px;
 }
 
-.transaction-tags-table tr.transaction-tags-table-row-tag .right-bottom-icon .v-badge__badge {
-    padding-bottom: 1px;
-}
-
-.transaction-tags-table .v-text-field .v-input__prepend {
-    margin-inline-end: 0;
-    color: rgba(var(--v-theme-on-surface));
-}
-
-.transaction-tags-table .v-text-field .v-input__prepend .v-badge>.v-badge__wrapper>.v-icon {
-    opacity: var(--v-medium-emphasis-opacity);
-}
-
-.transaction-tags-table .v-text-field.v-input--plain-underlined .v-input__prepend {
-    padding-top: 10px;
-}
-
-.transaction-tags-table .v-text-field .v-field__input {
-    font-size: 0.875rem;
-    padding-top: 0;
-    color: rgba(var(--v-theme-on-surface));
-}
-
-.transaction-tags-table .transaction-tag-name {
+.customers-table .customer-name {
     font-size: 0.875rem;
 }
 
-.transaction-tags-table tr .v-text-field .v-field__input {
-    padding-bottom: 1px;
+.customers-table .customer-type-select {
+    font-size: 0.875rem;
 }
 </style>
