@@ -101,8 +101,7 @@
                             </td>
                             <td>
                                 <div class="d-flex align-center">
-                                    <v-btn class="px-2" color="default" density="comfortable" variant="text"
-                                        :class="{ 'd-none': loading, 'hover-display': !loading }"
+                                    <v-btn class="px-2 hover-display" color="default" density="comfortable" variant="text"
                                         :prepend-icon="customer.hidden ? mdiEyeOutline : mdiEyeOffOutline"
                                         :loading="customerHiding[customer.id]" :disabled="loading || updating"
                                         @click="hide(customer, !customer.hidden)">
@@ -111,8 +110,7 @@
                                         </template>
                                         {{ customer.hidden ? tt('Show') : tt('Hide') }}
                                     </v-btn>
-                                    <v-btn class="px-2" color="default" density="comfortable" variant="text"
-                                        :class="{ 'd-none': loading, 'hover-display': !loading }"
+                                    <v-btn class="px-2 hover-display" color="default" density="comfortable" variant="text"
                                         :prepend-icon="mdiPencilOutline" :loading="customerUpdating[customer.id]"
                                         :disabled="loading || updating" @click="edit(customer)">
                                         <template #loader>
@@ -120,8 +118,7 @@
                                         </template>
                                         {{ tt('Edit') }}
                                     </v-btn>
-                                    <v-btn class="px-2" color="default" density="comfortable" variant="text"
-                                        :class="{ 'd-none': loading, 'hover-display': !loading }"
+                                    <v-btn class="px-2 hover-display" color="default" density="comfortable" variant="text"
                                         :prepend-icon="mdiDeleteOutline" :loading="customerRemoving[customer.id]"
                                         :disabled="loading || updating" @click="remove(customer)">
                                         <template #loader>
@@ -149,7 +146,7 @@
                                 <v-select class="customer-type-select" :items="customerTypeOptions"
                                     :label="tt('Customer Type')" v-model="newCustomer.customerType"
                                     :disabled="loading || updating" density="compact" variant="underlined"
-                                    return-object />
+                                    item-title="title" item-value="value" />
                             </td>
                         </tr>
                         <tr class="text-sm">
@@ -204,6 +201,14 @@
                             </td>
                         </tr>
                     </tbody>
+                    <template #bottom>
+                        <div class="d-flex align-center justify-center text-no-wrap pa-4">
+                            <pagination-buttons :disabled="loading"
+                                                :totalPageCount="totalPageCount"
+                                                v-model="currentPage">
+                            </pagination-buttons>
+                        </div>
+                    </template>
                 </v-table>
             </v-card>
         </v-col>
@@ -218,13 +223,14 @@
 import ConfirmDialog from '@/components/desktop/ConfirmDialog.vue';
 import SnackBar from '@/components/desktop/SnackBar.vue';
 import CustomerEditDialog from './dialogs/EditDialog.vue';
+import PaginationButtons from '@/components/desktop/PaginationButtons.vue';
 
 import { ref, computed, useTemplateRef, watch } from 'vue';
 
 import { useI18n } from '@/locales/helpers.ts';
 import { useCustomersStore } from '@/stores/customer.ts';
-import { Customer, CustomerType, type CustomerInfo } from '@/models/customer.ts';
-import { generateClientSessionId } from '@/lib/session.ts';
+import { Customer, CustomerType } from '@/models/customer.ts';
+import { generateRandomUUID } from '@/lib/misc.ts';
 
 import {
     mdiRefresh,
@@ -257,6 +263,17 @@ const customerUpdating = ref<Record<string, boolean>>({});
 const customerHiding = ref<Record<string, boolean>>({});
 const customerRemoving = ref<Record<string, boolean>>({});
 const showHidden = ref<boolean>(false);
+
+// 分页相关状态
+const currentPage = ref<number>(1);
+const totalCount = ref<number>(0);
+const pageSize = ref<number>(20);
+const totalPageCount = computed<number>(() => {
+    if (totalCount.value <= 0) {
+        return 1;
+    }
+    return Math.ceil(totalCount.value / pageSize.value);
+});
 
 const customers = computed<Customer[]>(() => customersStore.allCustomers);
 const noAvailableCustomer = computed<boolean>(() => {
@@ -291,9 +308,12 @@ function getCustomerTypeName(type: CustomerType): string {
 function reload(): void {
     loading.value = true;
 
-    customersStore.getAllCustomers({
-        visible_only: !showHidden.value
-    }).then(() => {
+    customersStore.getAllCustomersWithPagination({
+        visible_only: !showHidden.value,
+        page: currentPage.value,
+        page_size: pageSize.value
+    }).then((result) => {
+        totalCount.value = result.total;
         loading.value = false;
         snackbar.value?.showMessage(tt('Customer list has been updated'));
     }).catch(error => {
@@ -311,6 +331,7 @@ function add(): void {
 function edit(customer: Customer): void {
     editDialog.value?.open(customer).then((modified) => {
         if (modified) {
+            currentPage.value = 1;
             reload();
         }
     });
@@ -324,7 +345,7 @@ function save(customer: Customer): void {
     updating.value = true;
     customerUpdating.value[customer.id || ''] = true;
 
-    const clientSessionId = generateClientSessionId();
+    const clientSessionId = generateRandomUUID();
 
     customersStore.createCustomer({
         name: customer.name,
@@ -339,6 +360,8 @@ function save(customer: Customer): void {
         updating.value = false;
         customerUpdating.value[customer.id || ''] = false;
         newCustomer.value = null;
+        currentPage.value = 1;
+        reload();
     }).catch(error => {
         updating.value = false;
         customerUpdating.value[customer.id || ''] = false;
@@ -376,6 +399,7 @@ function remove(customer: Customer): void {
         customersStore.deleteCustomer(customer.id).then(() => {
             updating.value = false;
             customerRemoving.value[customer.id] = false;
+            reload();
         }).catch(error => {
             updating.value = false;
             customerRemoving.value[customer.id] = false;
@@ -387,13 +411,21 @@ function remove(customer: Customer): void {
 }
 
 watch(showHidden, () => {
+    currentPage.value = 1;
+    reload();
+});
+
+watch(currentPage, () => {
     reload();
 });
 
 // Load initial data
-customersStore.getAllCustomers({
-    visible_only: false
-}).then(() => {
+customersStore.getAllCustomersWithPagination({
+    visible_only: false,
+    page: 1,
+    page_size: pageSize.value
+}).then((result) => {
+    totalCount.value = result.total;
     loading.value = false;
 }).catch(error => {
     loading.value = false;
@@ -405,11 +437,15 @@ customersStore.getAllCustomers({
 
 <style scoped>
 .customers-table tr.customers-table-row .hover-display {
-    display: none;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
 }
 
 .customers-table tr.customers-table-row:hover .hover-display {
-    display: inline-grid;
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
 }
 
 .customers-table tr:not(:last-child)>td>div {
@@ -421,10 +457,14 @@ customersStore.getAllCustomers({
 }
 
 .customers-table .customer-name {
-    font-size: 0.875rem;
+    font-size: 1rem;
 }
 
 .customers-table .customer-type-select {
-    font-size: 0.875rem;
+    font-size: 1rem;
+}
+
+.customers-table {
+    font-size: 1rem;
 }
 </style>

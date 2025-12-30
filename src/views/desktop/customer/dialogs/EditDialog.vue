@@ -19,7 +19,8 @@
                     :disabled="updating"
                     density="compact"
                     variant="underlined"
-                    return-object
+                    item-title="title"
+                    item-value="value"
                     class="mb-4"
                 />
 
@@ -120,7 +121,7 @@ const isModified = computed<boolean>(() => {
 const emit = defineEmits<{
     (e: 'update:modelValue', value: boolean): void;
     (e: 'save', modified: boolean): void;
-});
+}>();
 
 function onDialogStateChange(value: boolean): void {
     if (!value && !updating.value) {

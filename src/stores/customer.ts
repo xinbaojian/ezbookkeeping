@@ -1,12 +1,9 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
-import type { BeforeResolveFunction } from '@/core/base.ts';
+import { Customer, CustomerType } from '@/models/customer.ts';
 
-import { Customer, CustomerType, type CustomerInfo } from '@/models/customer.ts';
-
-import { isEquals } from '@/lib/common.ts';
-import services, { type ApiResponsePromise } from '@/lib/services.ts';
+import services from '@/lib/services.ts';
 import logger from '@/lib/logger.ts';
 
 export const useCustomersStore = defineStore('customers', () => {
@@ -69,69 +66,104 @@ export const useCustomersStore = defineStore('customers', () => {
     }
 
     // API calls
-    function getAllCustomers(params: { visible_only?: boolean; customer_type?: CustomerType } = {}): ApiResponsePromise<CustomerInfo[]> {
-        return services.get('/api/v1/customers/list.json', { params }).then(response => {
+    function getAllCustomers(params: { visible_only?: boolean; customer_type?: CustomerType } = {}): Promise<Customer[]> {
+        return services.getAllCustomers(params).then(response => {
             const data = response.data;
-            const customers = Customer.ofMulti(data);
+            if (!data || !data.success || !data.result) {
+                throw new Error('Unable to retrieve customers list');
+            }
+            const customers = Customer.ofMulti(data.result);
             loadCustomersList(customers);
             customersListStateInvalid.value = false;
             return customers;
         }).catch(error => {
-            logger.post('error', 'Failed to get customers list', error);
+            logger.error('Failed to get customers list', error);
             throw error;
         });
     }
 
-    function getCustomer(id: string): ApiResponsePromise<Customer> {
-        return services.get('/api/v1/customers/get.json', { params: { id } }).then(response => {
-            const customer = Customer.of(response.data);
+    function getAllCustomersWithPagination(params: { visible_only?: boolean; customer_type?: CustomerType; page?: number; page_size?: number } = {}): Promise<{ customers: Customer[]; total: number; totalPages: number }> {
+        return services.getAllCustomersWithPagination(params).then(response => {
+            const data = response.data;
+            if (!data || !data.success || !data.result) {
+                throw new Error('Unable to retrieve customers list');
+            }
+            const customers = Customer.ofMulti(data.result.customers);
+            loadCustomersList(customers);
+            customersListStateInvalid.value = false;
+            return {
+                customers,
+                total: data.result.total,
+                totalPages: data.result.total_pages
+            };
+        }).catch(error => {
+            logger.error('Failed to get customers list', error);
+            throw error;
+        });
+    }
+
+    function getCustomer(id: string): Promise<Customer> {
+        return services.getCustomer({ id }).then(response => {
+            const data = response.data;
+            if (!data || !data.success || !data.result) {
+                throw new Error('Unable to retrieve customer');
+            }
+            const customer = Customer.of(data.result);
             modifyCustomerInCustomersList(customer);
             return customer;
         }).catch(error => {
-            logger.post('error', 'Failed to get customer', error);
+            logger.error('Failed to get customer', error);
             throw error;
         });
     }
 
-    function createCustomer(data: { name: string; customer_type: CustomerType; address?: string; contacts?: string; contacts_info?: string; comment?: string; hidden?: boolean; client_session_id?: string }): ApiResponsePromise<Customer> {
-        return services.post('/api/v1/customers/add.json', data).then(response => {
-            const customer = Customer.of(response.data);
+    function createCustomer(data: { name: string; customer_type: CustomerType; address?: string; contacts?: string; contacts_info?: string; comment?: string; hidden?: boolean; client_session_id?: string }): Promise<Customer> {
+        return services.createCustomer(data).then(response => {
+            const responseData = response.data;
+            if (!responseData || !responseData.success || !responseData.result) {
+                throw new Error('Unable to create customer');
+            }
+            const customer = Customer.of(responseData.result);
             addCustomerToCustomersList(customer);
             return customer;
         }).catch(error => {
-            logger.post('error', 'Failed to create customer', error);
+            logger.error('Failed to create customer', error);
             throw error;
         });
     }
 
-    function modifyCustomer(data: { id: string; name: string; customer_type: CustomerType; address?: string; contacts?: string; contacts_info?: string; comment?: string; hidden?: boolean }): ApiResponsePromise<Customer> {
-        return services.post('/api/v1/customers/modify.json', data).then(response => {
-            const customer = Customer.of(response.data);
+    function modifyCustomer(data: { id: string; name: string; customer_type: CustomerType; address?: string; contacts?: string; contacts_info?: string; comment?: string; hidden?: boolean }): Promise<Customer> {
+        return services.modifyCustomer(data).then(response => {
+            const responseData = response.data;
+            if (!responseData || !responseData.success || !responseData.result) {
+                throw new Error('Unable to modify customer');
+            }
+            const customer = Customer.of(responseData.result);
             modifyCustomerInCustomersList(customer);
             return customer;
         }).catch(error => {
-            logger.post('error', 'Failed to modify customer', error);
+            logger.error('Failed to modify customer', error);
             throw error;
         });
     }
 
-    function deleteCustomer(id: string): ApiResponsePromise<void> {
-        return services.post('/api/v1/customers/delete.json', { id }).then(() => {
+    function deleteCustomer(id: string): Promise<void> {
+        return services.deleteCustomer({ id }).then(() => {
             removeCustomerFromCustomersList(id);
         }).catch(error => {
-            logger.post('error', 'Failed to delete customer', error);
+            logger.error('Failed to delete customer', error);
             throw error;
         });
     }
 
-    function hideCustomer(id: string, hidden: boolean): ApiResponsePromise<void> {
-        return services.post('/api/v1/customers/hide.json', { id, hidden }).then(() => {
+    function hideCustomer(id: string, hidden: boolean): Promise<void> {
+        return services.hideCustomer({ id, hidden }).then(() => {
             const customer = customersMap.value[id];
             if (customer) {
                 customer.hidden = hidden;
             }
         }).catch(error => {
-            logger.post('error', 'Failed to hide/show customer', error);
+            logger.error('Failed to hide/show customer', error);
             throw error;
         });
     }
@@ -149,6 +181,7 @@ export const useCustomersStore = defineStore('customers', () => {
         getCustomerById,
         getCustomersByType,
         getAllCustomers,
+        getAllCustomersWithPagination,
         getCustomer,
         createCustomer,
         modifyCustomer,
@@ -156,5 +189,3 @@ export const useCustomersStore = defineStore('customers', () => {
         hideCustomer
     };
 });
-
-export type CustomersBeforeResolveFunction = BeforeResolveFunction<ReturnType<typeof useCustomersStore>>;

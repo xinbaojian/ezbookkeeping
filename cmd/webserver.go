@@ -381,6 +381,7 @@ func startWebServer(c *core.CliContext) error {
 
 			// Customers
 			apiV1Route.GET("/customers/list.json", bindApi(api.Customers.CustomerListHandler))
+			apiV1Route.GET("/customers/list_with_pagination.json", bindApi(api.Customers.CustomerListWithPaginationHandler))
 			apiV1Route.GET("/customers/get.json", bindApi(api.Customers.CustomerGetHandler))
 			apiV1Route.POST("/customers/add.json", bindApi(api.Customers.CustomerCreateHandler))
 			apiV1Route.POST("/customers/modify.json", bindApi(api.Customers.CustomerModifyHandler))

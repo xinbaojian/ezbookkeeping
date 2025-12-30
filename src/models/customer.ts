@@ -1,5 +1,3 @@
-import type { DateTimeString } from '@/core/base.ts';
-
 // Customer types
 export enum CustomerType {
     CUSTOMER = 1,
@@ -16,8 +14,8 @@ export interface CustomerInfo {
     contacts_info: string;
     comment: string;
     hidden: boolean;
-    created_time: DateTimeString;
-    updated_time: DateTimeString;
+    created_time: string;
+    updated_time: string;
 }
 
 export interface CustomerListResponse {
@@ -66,7 +64,7 @@ export interface CustomerListRequest {
     page_size?: number;
 }
 
-export class Customer implements CustomerInfo {
+export class Customer {
     public id: string;
     public name: string;
     public customerType: CustomerType;

@@ -148,6 +148,15 @@ import type {
     UserExternalAuthInfoResponse
 } from '@/models/user_external_auth.ts';
 import type {
+    CustomerInfo,
+    CustomerCreateRequest,
+    CustomerModifyRequest,
+    CustomerDeleteRequest,
+    CustomerHideRequest,
+    CustomerListRequest,
+    CustomerListResponse
+} from '@/models/customer.ts';
+import type {
     OAuth2CallbackLoginRequest
 } from '@/models/oauth2.ts';
 import type {
@@ -761,6 +770,27 @@ export default {
     },
     deleteUserCustomExchangeRate: (req: UserCustomExchangeRateDeleteRequest): ApiResponsePromise<boolean> => {
         return axios.post<ApiResponse<boolean>>('v1/exchange_rates/user_custom/delete.json', req);
+    },
+    getAllCustomers: (params: CustomerListRequest = {}): ApiResponsePromise<CustomerInfo[]> => {
+        return axios.get<ApiResponse<CustomerInfo[]>>('v1/customers/list.json', { params });
+    },
+    getAllCustomersWithPagination: (params: CustomerListRequest = {}): ApiResponsePromise<CustomerListResponse> => {
+        return axios.get<ApiResponse<CustomerListResponse>>('v1/customers/list_with_pagination.json', { params });
+    },
+    getCustomer: ({ id }: { id: string }): ApiResponsePromise<CustomerInfo> => {
+        return axios.get<ApiResponse<CustomerInfo>>('v1/customers/get.json', { params: { id } });
+    },
+    createCustomer: (req: CustomerCreateRequest): ApiResponsePromise<CustomerInfo> => {
+        return axios.post<ApiResponse<CustomerInfo>>('v1/customers/add.json', req);
+    },
+    modifyCustomer: (req: CustomerModifyRequest): ApiResponsePromise<CustomerInfo> => {
+        return axios.post<ApiResponse<CustomerInfo>>('v1/customers/modify.json', req);
+    },
+    deleteCustomer: (req: CustomerDeleteRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/customers/delete.json', req);
+    },
+    hideCustomer: (req: CustomerHideRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/customers/hide.json', req);
     },
     getServerVersion: (): ApiResponsePromise<VersionInfo> => {
         return axios.get<ApiResponse<VersionInfo>>('v1/systems/version.json');
